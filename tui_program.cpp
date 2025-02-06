@@ -22,7 +22,7 @@ public:
         mousemask(ALL_MOUSE_EVENTS, NULL); // Enable mouse events
 
         int choice = 0;
-        vector<string> options = {"Add Question", "Show Questions", "Exit"};
+        vector<string> options = {"Add Question", "Show Questions", "Search Question", "Exit"};
         while (true) {
             clear();
             printMenu(options, choice);
@@ -36,6 +36,8 @@ public:
                     addQuestion();
                 } else if (choice == 1) {
                     showQuestions();
+                } else if (choice == 2) {
+                    searchQuestion();
                 } else {
                     break; // Exit
                 }
@@ -49,6 +51,8 @@ public:
                         } else if (event.y == 2) { // Assuming the second option is on the third line
                             showQuestions();
                         } else if (event.y == 3) { // Assuming the third option is on the fourth line
+                            searchQuestion();
+                        } else if (event.y == 4) { // Assuming the fourth option is on the fifth line
                             break; // Exit
                         }
                     }
@@ -245,6 +249,32 @@ private:
             }
         }
         printw("\nPress ESC to return to the menu...");
+        while (getch() != 27); // Wait for ESC key
+    }
+
+    void searchQuestion() {
+        char searchNumber[10]; // Initialize a character array for search input
+        clear();
+        printw("Enter question number to search: ");
+        echo(); // Enable echoing of input characters
+        getstr(searchNumber); // Read input into the buffer
+        noecho(); // Disable echoing again
+
+        // Search for the question
+        bool found = false;
+        for (const auto& question : questions) {
+            if (question.number == searchNumber) {
+                printw("Found: %s: %s | Status: %s\n", question.number.c_str(), question.text.c_str(), question.status.c_str()); // Show found question
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            printw("No question found with number: %s. Press ESC to return to the menu.\n", searchNumber);
+        } else {
+            printw("\nPress any key to return to the menu...");
+        }
         while (getch() != 27); // Wait for ESC key
     }
 
