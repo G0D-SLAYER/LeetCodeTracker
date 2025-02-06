@@ -3,6 +3,7 @@
 #include <string>
 #include <cstring> // Include for strlen
 #include <cctype>  // Include for isdigit
+#include <algorithm> // Include for remove_if
 
 using namespace std;
 
@@ -253,8 +254,15 @@ private:
     }
 
     void searchQuestion() {
-        char searchNumber[10]; // Initialize a character array for search input
         clear();
+        if (questions.empty()) {
+            printw("No questions available. Press ESC to return to the menu.\n");
+            getch();
+            return;
+        }
+
+        // Prompt for question number
+        char searchNumber[10]; // Initialize a character array for search input
         printw("Enter question number to search: ");
         echo(); // Enable echoing of input characters
         getstr(searchNumber); // Read input into the buffer
@@ -262,9 +270,10 @@ private:
 
         // Search for the question
         bool found = false;
+        Question foundQuestion;
         for (const auto& question : questions) {
             if (question.number == searchNumber) {
-                printw("Found: %s: %s | Status: %s\n", question.number.c_str(), question.text.c_str(), question.status.c_str()); // Show found question
+                foundQuestion = question; // Store found question
                 found = true;
                 break;
             }
@@ -273,9 +282,116 @@ private:
         if (!found) {
             printw("No question found with number: %s. Press ESC to return to the menu.\n", searchNumber);
         } else {
-            printw("\nPress any key to return to the menu...");
+            clear();
+            printw("Found Question:\n");
+            printw("Number: %s\nText: %s\nStatus: %s\n", foundQuestion.number.c_str(), foundQuestion.text.c_str(), foundQuestion.status.c_str());
+            printw("\nOptions:\n");
+            vector<string> options = {"Update Question", "Delete Question", "Back to Menu"};
+            int selected = 0;
+
+            while (true) {
+                for (size_t i = 0; i < options.size(); ++i) {
+                    if (i == selected) {
+                        attron(A_REVERSE); // Highlight selected option
+                    }
+                    printw("%d. %s\n", i + 1, options[i].c_str());
+                    if (i == selected) {
+                        attroff(A_REVERSE); // Remove highlight
+                    }
+                }
+
+                int ch = getch();
+                if (ch == KEY_UP) {
+                    selected = (selected - 1 + options.size()) % options.size();
+                } else if (ch == KEY_DOWN) {
+                    selected = (selected + 1) % options.size();
+                } else if (ch == 10) { // Enter key
+                    if (selected == 0) {
+                        clear();
+                        printw("Updating Question:\n");
+                        printw("Number: %s\nText: %s\nStatus: %s\n", foundQuestion.number.c_str(), foundQuestion.text.c_str(), foundQuestion.status.c_str());
+                        updateQuestion(foundQuestion.number); // Pass the question number to update
+                        return; // Back to Menu
+                    } else if (selected == 1) {
+                        clear();
+                        printw("Deleting Question:\n");
+                        printw("Number: %s\nText: %s\nStatus: %s\n", foundQuestion.number.c_str(), foundQuestion.text.c_str(), foundQuestion.status.c_str());
+                        deleteQuestion(foundQuestion.number);
+                        return; // Back to Menu
+                    } else {
+                        return; // Back to Menu
+                    }
+                } else if (ch == KEY_MOUSE) {
+                    MEVENT event;
+                    if (getmouse(&event) == OK) {
+                        if (event.y >= 0 && event.y < options.size()) {
+                            selected = event.y; // Set the selected option based on mouse click
+                        }
+                    }
+                }
+                clear(); // Clear the screen for the next iteration
+            }
         }
-        while (getch() != 27); // Wait for ESC key
+    }
+
+    void updateQuestion(const string& questionNumber) {
+        for (auto& question : questions) {
+            if (question.number == questionNumber) {
+                clear();
+                string newStatus;
+                printw("Updating Question:\n");
+                printw("Current Text: %s\n", question.text.c_str());
+
+                // Prompt for new status
+                int statusChoice = 0;
+                vector<string> statusOptions = {"Submitted", "Under Review", "Not Understood", "Cancel"};
+                while (true) {
+                    clear();
+                    printw("Set new status for the question:\n");
+                    for (size_t i = 0; i < statusOptions.size(); ++i) {
+                        if (i == statusChoice) {
+                            attron(A_REVERSE); // Highlight selected option
+                        }
+                        printw("%d. %s\n", i + 1, statusOptions[i].c_str());
+                        if (i == statusChoice) {
+                            attroff(A_REVERSE); // Remove highlight
+                        }
+                    }
+                    int ch = getch();
+                    if (ch == KEY_UP) {
+                        statusChoice = (statusChoice - 1 + statusOptions.size()) % statusOptions.size();
+                    } else if (ch == KEY_DOWN) {
+                        statusChoice = (statusChoice + 1) % statusOptions.size();
+                    } else if (ch == 10) { // Enter key
+                        if (statusChoice == 3) { // Cancel option
+                            return; // Exit the function without saving
+                        }
+                        newStatus = statusOptions[statusChoice];
+                        break; // Exit the loop if a valid choice is made
+                    }
+                }
+
+                if (!newStatus.empty()) {
+                    question.status = newStatus;
+                }
+
+                showPopup("Question status updated to: " + question.status);
+                return; // Exit after updating
+            }
+        }
+        showPopup("Question not found.");
+    }
+
+    void deleteQuestion(const string& questionNumber) {
+        auto it = remove_if(questions.begin(), questions.end(), [&](const Question& q) {
+            return q.number == questionNumber;
+        });
+        if (it != questions.end()) {
+            questions.erase(it, questions.end());
+            showPopup("Question deleted successfully.");
+        } else {
+            showPopup("Question not found.");
+        }
     }
 
     void showPopup(const string& message) {
