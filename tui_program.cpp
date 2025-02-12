@@ -1,21 +1,19 @@
 #include <ncurses.h>
 #include <vector>
 #include <string>
+#include "database.cpp" // Include the database header
 #include <cstring> // Include for strlen
 #include <cctype>  // Include for isdigit
 #include <algorithm> // Include for remove_if
 
 using namespace std;
 
-struct Question {
-    string text;
-    string status; // Status can be "Submitted", "Under Review", or "Not Understood"
-    string number; // Question number
-};
+#include "question.h" // Include the Question struct definition
 
 class TUI {
 public:
     void run() {
+        questions = db.getQuestions(); // Load questions from the database on startup
         initscr(); // Initialize ncurses
         cbreak(); // Disable line buffering
         noecho(); // Don't echo input
@@ -65,6 +63,7 @@ public:
     }
 
 private:
+    Database db{"questions.db"}; // Initialize the database
     vector<Question> questions; // Store questions with their statuses
 
     void addQuestion() {
@@ -150,12 +149,13 @@ private:
         }
 
         // Store the question and its status
-        questions.push_back({string(questionText), status, string(questionNumber)});
+        db.addQuestion(string(questionNumber), string(questionText), status); // Store in database
         showPopup("Question added: " + string(questionText) + "\nStatus: " + status);
     }
 
     void showQuestions() {
         clear();
+        questions = db.getQuestions(); // Retrieve questions from the database
         if (questions.empty()) {
             printw("No questions available. Press ESC to return to the menu.\n");
             getch();
@@ -254,6 +254,7 @@ private:
     }
 
     void searchQuestion() {
+        questions = db.getQuestions(); // Ensure questions are loaded before searching
         clear();
         if (questions.empty()) {
             printw("No questions available. Press ESC to return to the menu.\n");
@@ -335,11 +336,12 @@ private:
     }
 
     void updateQuestion(const string& questionNumber) {
-        for (auto& question : questions) {
+        string newStatus;
+        clear();
+        printw("Updating Question:\n");
+        // Retrieve the question from the database
+        for (const auto& question : questions) {
             if (question.number == questionNumber) {
-                clear();
-                string newStatus;
-                printw("Updating Question:\n");
                 printw("Current Text: %s\n", question.text.c_str());
 
                 // Prompt for new status
@@ -372,10 +374,10 @@ private:
                 }
 
                 if (!newStatus.empty()) {
-                    question.status = newStatus;
+                    db.updateQuestionInDB(questionNumber, newStatus); // Update in database
                 }
 
-                showPopup("Question status updated to: " + question.status);
+                showPopup("Question status updated to: " + newStatus);
                 return; // Exit after updating
             }
         }
@@ -383,15 +385,8 @@ private:
     }
 
     void deleteQuestion(const string& questionNumber) {
-        auto it = remove_if(questions.begin(), questions.end(), [&](const Question& q) {
-            return q.number == questionNumber;
-        });
-        if (it != questions.end()) {
-            questions.erase(it, questions.end());
-            showPopup("Question deleted successfully.");
-        } else {
-            showPopup("Question not found.");
-        }
+        db.deleteQuestionFromDB(questionNumber); // Delete from database
+        showPopup("Question deleted successfully.");
     }
 
     void showPopup(const string& message) {
