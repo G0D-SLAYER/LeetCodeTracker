@@ -21,7 +21,7 @@ public:
         mousemask(ALL_MOUSE_EVENTS, NULL); // Enable mouse events
 
         int choice = 0;
-        vector<string> options = {"Add Question", "Show Questions", "Search Question", "Exit"};
+        vector<string> options = {"Add Question", "Show Questions", "Search Question", "Delete All Questions", "Exit"};
         while (true) {
             clear();
             printMenu(options, choice);
@@ -37,8 +37,10 @@ public:
                     showQuestions();
                 } else if (choice == 2) {
                     searchQuestion();
-                } else {
-                    break; // Exit
+                } else if (choice == 3) {
+                    deleteAllQuestions();
+                } else if (choice == 4) {
+                    return; // Exit
                 }
             } else if (ch == KEY_MOUSE) {
                 MEVENT event;
@@ -52,7 +54,7 @@ public:
                         } else if (event.y == 3) { // Assuming the third option is on the fourth line
                             searchQuestion();
                         } else if (event.y == 4) { // Assuming the fourth option is on the fifth line
-                            break; // Exit
+                            return; // Exit
                         }
                     }
                 }
@@ -151,6 +153,19 @@ private:
         // Store the question and its status
         db.addQuestion(string(questionNumber), string(questionText), status); // Store in database
         showPopup("Question added: " + string(questionText) + "\nStatus: " + status);
+    }
+
+    void deleteAllQuestions() {
+        clear();
+        printw("Are you sure you want to delete all questions? (y/n): ");
+        char confirm = getch();
+        if (confirm == 'y' || confirm == 'Y') {
+            db.deleteAllQuestionsFromDB(); // Assuming this method exists in the Database class
+            showPopup("All questions deleted successfully.");
+            return; // Return to the menu after deletion
+        } else {
+            showPopup("Deletion canceled.");
+        }
     }
 
     void showQuestions() {

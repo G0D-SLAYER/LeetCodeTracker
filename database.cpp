@@ -80,6 +80,15 @@ public:
         sqlite3_finalize(stmt);
     }
 
+    void deleteAllQuestionsFromDB() {
+        const char* sql = "DELETE FROM questions;";
+        char* errMsg;
+        if (sqlite3_exec(db, sql, nullptr, 0, &errMsg) != SQLITE_OK) {
+            cerr << "SQL error: " << errMsg << endl;
+            sqlite3_free(errMsg);
+        }
+    }
+
 private:
     sqlite3* db;
 };
