@@ -40,7 +40,10 @@ public:
                 } else if (choice == 3) {
                     deleteAllQuestions();
                 } else if (choice == 4) {
-                    return; // Exit
+                    clear(); // Clear the screen before exiting
+                    printSubmittedCount(); // Print count of submitted questions
+                    getch(); // Wait for user input before exiting
+                    break; // Exit
                 }
             } else if (ch == KEY_MOUSE) {
                 MEVENT event;
@@ -54,7 +57,10 @@ public:
                         } else if (event.y == 3) { // Assuming the third option is on the fourth line
                             searchQuestion();
                         } else if (event.y == 4) { // Assuming the fourth option is on the fifth line
-                            return; // Exit
+                            clear(); // Clear the screen before exiting
+                            printSubmittedCount(); // Print count of submitted questions
+                            getch(); // Wait for user input before exiting
+                            break; // Exit
                         }
                     }
                 }
@@ -67,6 +73,16 @@ public:
 private:
     Database db{"questions.db"}; // Initialize the database
     vector<Question> questions; // Store questions with their statuses
+
+    void printSubmittedCount() {
+        int count = 0;
+        for (const auto& question : questions) {
+            if (question.status == "Submitted") {
+                count++;
+            }
+        }
+        mvprintw(1, 1, "Total Submitted Questions: %d", count);
+    }
 
     void addQuestion() {
         char questionText[256]; // Initialize a character array with a buffer size
@@ -152,6 +168,7 @@ private:
 
         // Store the question and its status
         db.addQuestion(string(questionNumber), string(questionText), status); // Store in database
+        questions = db.getQuestions(); // Refresh the questions list to update the count
         showPopup("Question added: " + string(questionText) + "\nStatus: " + status);
     }
 
@@ -161,6 +178,7 @@ private:
         char confirm = getch();
         if (confirm == 'y' || confirm == 'Y') {
             db.deleteAllQuestionsFromDB(); // Assuming this method exists in the Database class
+            questions = db.getQuestions(); // Refresh the questions list to update the count
             showPopup("All questions deleted successfully.");
             return; // Return to the menu after deletion
         } else {
