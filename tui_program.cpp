@@ -13,6 +13,12 @@ using namespace std;
 class TUI {
 public:
     void run() {
+        // Handle user authentication
+        if (!handleAuthentication()) {
+            endwin();
+            return;
+        }
+
         questions = db.getQuestions(); // Load questions from the database on startup
         initscr(); // Initialize ncurses
         cbreak(); // Disable line buffering
@@ -73,6 +79,7 @@ public:
 private:
     Database db{"questions.db"}; // Initialize the database
     vector<Question> questions; // Store questions with their statuses
+    string currentUsername; // Store the logged-in username
 
     void printSubmittedCount() {
         int count = 0;
@@ -177,10 +184,23 @@ private:
         printw("Are you sure you want to delete all questions? (y/n): ");
         char confirm = getch();
         if (confirm == 'y' || confirm == 'Y') {
-            db.deleteAllQuestionsFromDB(); // Assuming this method exists in the Database class
-            questions = db.getQuestions(); // Refresh the questions list to update the count
-            showPopup("All questions deleted successfully.");
-            return; // Return to the menu after deletion
+            // Ask for password confirmation
+            clear();
+            char password[256];
+            printw("Enter your password to confirm deletion: ");
+            echo();
+            getstr(password);
+            noecho();
+            
+            // Verify password
+            if (db.authenticateUser(currentUsername, password)) {
+                db.deleteAllQuestionsFromDB();
+                questions = db.getQuestions();
+                showPopup("All questions deleted successfully.");
+            } else {
+                showPopup("Incorrect password. Deletion canceled.");
+            }
+            return;
         } else {
             showPopup("Deletion canceled.");
         }
@@ -422,10 +442,76 @@ private:
         showPopup("Question deleted successfully.");
     }
 
+    bool handleAuthentication() {
+        initscr(); // Initialize ncurses for authentication screen
+        cbreak();
+        noecho();
+        keypad(stdscr, TRUE);
+
+        // Check if any users exist
+        if (!db.userExists()) {
+            // Create first user
+            clear();
+            printw("No users found. Create an admin account:\n");
+            
+            char username[256];
+            char password[256];
+            
+            // Get username
+            printw("Enter username: ");
+            echo();
+            getstr(username);
+            noecho();
+            
+            // Get password
+            printw("Enter password: ");
+            echo();
+            getstr(password);
+            noecho();
+            
+            // Create user
+            if (!db.createUser(username, password)) {
+                showPopup("Failed to create user. Exiting...");
+                return false;
+            }
+            showPopup("User created successfully!");
+        }
+
+        // Login loop
+        while (true) {
+            clear();
+            printw("Login\n\n");
+            
+            char username[256];
+            char password[256];
+            
+            // Get username
+            printw("Username: ");
+            echo();
+            getstr(username);
+            noecho();
+            
+            // Get password
+            printw("Password: ");
+            echo();
+            getstr(password);
+            noecho();
+            
+            // Authenticate
+            if (db.authenticateUser(username, password)) {
+                currentUsername = username; // Store the logged-in username
+                showPopup("Login successful!");
+                return true;
+            }
+            
+            showPopup("Invalid username or password. Try again.");
+        }
+    }
+
     void showPopup(const string& message) {
         clear();
         mvprintw(1, 1, "%s", message.c_str()); // Display at fixed vertical position
-        printw("\nPress any key to return to the menu...");
+        printw("\nPress any key to continue...");
         getch();
     }
 

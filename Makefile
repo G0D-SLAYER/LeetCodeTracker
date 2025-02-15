@@ -1,24 +1,29 @@
-# Makefile for compiling the TUI program
-
-# Compiler
+# Compiler and flags
 CXX = g++
+CXXFLAGS = -Wall -Wextra -std=c++17
 
-# Compiler flags
-CXXFLAGS = -lncurses -lsqlite3
+# Libraries
+LIBS = -lncurses -lsqlite3 -lcrypto
+
+# Target executable
+TARGET = tui_program
 
 # Source files
-SRCS = tui_program.cpp
-
-# Output executable
-TARGET = tui_program
+SRCS = tui_program.cpp database.cpp
 
 # Default target
 all: $(TARGET)
 
-# Compile the program
+# Build target
 $(TARGET): $(SRCS)
-	$(CXX) $(SRCS) -o $(TARGET) $(CXXFLAGS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS) $(LIBS)
 
-# Clean up
+# Run the program
+run: $(TARGET)
+	./$(TARGET)
+
+# Clean up build files
 clean:
 	rm -f $(TARGET)
+
+.PHONY: all run clean
