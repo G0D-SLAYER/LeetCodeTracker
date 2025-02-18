@@ -173,19 +173,6 @@ public:
         return result == SQLITE_DONE;
     }
 
-    vector<string> getAllUsers() {
-        vector<string> users;
-        const char* sql = "SELECT username FROM users;";
-        sqlite3_stmt* stmt;
-        sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
-        while (sqlite3_step(stmt) == SQLITE_ROW) {
-            string username = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
-            users.push_back(username);
-        }
-        sqlite3_finalize(stmt);
-        return users;
-    }
-
 private:
     sqlite3* db;
 };
