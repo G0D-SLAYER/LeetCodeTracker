@@ -158,6 +158,21 @@ public:
         return authenticated;
     }
 
+    bool deleteUser(const string& username, const string& password) {
+        // First authenticate the user
+        if (!authenticateUser(username, password)) {
+            return false;
+        }
+        
+        const char* sql = "DELETE FROM users WHERE username = ?;";
+        sqlite3_stmt* stmt;
+        sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+        sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
+        int result = sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+        return result == SQLITE_DONE;
+    }
+
 private:
     sqlite3* db;
 };

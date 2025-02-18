@@ -188,7 +188,7 @@ private:
             clear();
             char password[256];
             printw("Enter your password to confirm deletion: ");
-            echo();
+            noecho();  // Disable echoing before getting password
             getstr(password);
             noecho();
             
@@ -398,40 +398,40 @@ private:
                 printw("Current Text: %s\n", question.text.c_str());
 
                 // Prompt for new status
-                int statusChoice = 0;
-                vector<string> statusOptions = {"Submitted", "Under Review", "Not Understood", "Cancel"};
-                while (true) {
-                    clear();
-                    printw("Set new status for the question:\n");
-                    for (size_t i = 0; i < statusOptions.size(); ++i) {
-                        if (i == statusChoice) {
-                            attron(A_REVERSE); // Highlight selected option
-                        }
-                        printw("%d. %s\n", i + 1, statusOptions[i].c_str());
-                        if (i == statusChoice) {
-                            attroff(A_REVERSE); // Remove highlight
-                        }
-                    }
-                    int ch = getch();
-                    if (ch == KEY_UP) {
-                        statusChoice = (statusChoice - 1 + statusOptions.size()) % statusOptions.size();
-                    } else if (ch == KEY_DOWN) {
-                        statusChoice = (statusChoice + 1) % statusOptions.size();
-                    } else if (ch == 10) { // Enter key
-                        if (statusChoice == 3) { // Cancel option
-                            return; // Exit the function without saving
-                        }
-                        newStatus = statusOptions[statusChoice];
-                        break; // Exit the loop if a valid choice is made
-                    }
+        int statusChoice = 0;
+        vector<string> statusOptions = {"Submitted", "Under Review", "Not Understood", "Cancel"};
+        while (true) {
+            clear();
+            printw("Set new status for the question:\n");
+            for (size_t i = 0; i < statusOptions.size(); ++i) {
+                if (i == statusChoice) {
+                    attron(A_REVERSE); // Highlight selected option
                 }
-
-                if (!newStatus.empty()) {
-                    db.updateQuestionInDB(questionNumber, newStatus); // Update in database
+                printw("%d. %s\n", i + 1, statusOptions[i].c_str());
+                if (i == statusChoice) {
+                    attroff(A_REVERSE); // Remove highlight
                 }
+            }
+            int ch = getch();
+            if (ch == KEY_UP) {
+                statusChoice = (statusChoice - 1 + statusOptions.size()) % statusOptions.size();
+            } else if (ch == KEY_DOWN) {
+                statusChoice = (statusChoice + 1) % statusOptions.size();
+            } else if (ch == 10) { // Enter key
+                if (statusChoice == 3) { // Cancel option
+                    return; // Exit the function without saving
+                }
+                newStatus = statusOptions[statusChoice];
+                break; // Exit the loop if a valid choice is made
+            }
+        }
 
-                showPopup("Question status updated to: " + newStatus);
-                return; // Exit after updating
+        if (!newStatus.empty()) {
+            db.updateQuestionInDB(questionNumber, newStatus); // Update in database
+        }
+
+        showPopup("Question status updated to: " + newStatus);
+        return; // Exit after updating
             }
         }
         showPopup("Question not found.");
@@ -448,35 +448,34 @@ private:
         noecho();
         keypad(stdscr, TRUE);
 
-        // Check if any users exist
-        if (!db.userExists()) {
-            // Create first user
+        int choice = 0;
+        vector<string> authOptions = {"Login", "Create User"};
+        
+        while (true) {
             clear();
-            printw("No users found. Create an admin account:\n");
+            printw("Authentication\n\n");
+            printMenu(authOptions, choice);
             
-            char username[256];
-            char password[256];
-            
-            // Get username
-            printw("Enter username: ");
-            echo();
-            getstr(username);
-            noecho();
-            
-            // Get password
-            printw("Enter password: ");
-            echo();
-            getstr(password);
-            noecho();
-            
-            // Create user
-            if (!db.createUser(username, password)) {
-                showPopup("Failed to create user. Exiting...");
-                return false;
+            int ch = getch();
+            if (ch == KEY_UP) {
+                choice = (choice - 1 + authOptions.size()) % authOptions.size();
+            } else if (ch == KEY_DOWN) {
+                choice = (choice + 1) % authOptions.size();
+            } else if (ch == 10) { // Enter key
+                if (choice == 0) {
+                    // Login
+                    return handleLogin();
+                } else if (choice == 1) {
+                    // Create User
+                    if (handleUserCreation()) {
+                        return true;
+                    }
+                }
             }
-            showPopup("User created successfully!");
         }
+    }
 
+    bool handleLogin() {
         // Login loop
         while (true) {
             clear();
@@ -493,7 +492,7 @@ private:
             
             // Get password
             printw("Password: ");
-            echo();
+            noecho();  // Disable echoing before getting password
             getstr(password);
             noecho();
             
@@ -506,6 +505,54 @@ private:
             
             showPopup("Invalid username or password. Try again.");
         }
+    }
+
+    bool handleUserCreation() {
+        clear();
+        printw("Create New User\n\n");
+        
+        char username[256];
+        char password[256];
+        char confirmPassword[256];
+        
+        // Get username
+        printw("Enter username: ");
+        echo();
+        getstr(username);
+        noecho();
+        
+            // Get password
+            printw("Enter password: ");
+            noecho();  // Disable echoing before getting password
+            getstr(password);
+            noecho();
+            
+            // Confirm password
+            printw("Confirm password: ");
+            noecho();  // Disable echoing before getting confirmation
+            getstr(confirmPassword);
+            noecho();
+
+        
+        // Validate inputs
+        if (strlen(username) == 0 || strlen(password) == 0) {
+            showPopup("Username and password are required.");
+            return false;
+        }
+        
+        if (strcmp(password, confirmPassword) != 0) {
+            showPopup("Passwords do not match.");
+            return false;
+        }
+        
+        // Create user
+        if (!db.createUser(username, password)) {
+            showPopup("Failed to create user. The username might already exist.");
+            return false;
+        }
+        
+        showPopup("User created successfully!");
+        return true;
     }
 
     void showPopup(const string& message) {
